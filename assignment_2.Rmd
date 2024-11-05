@@ -1,0 +1,127 @@
+---
+title: "assigntment_2"
+author: "Søren Meiner"
+date: "2024-11-05"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+### packages needed
+```{r}
+install.packages('pacman')
+
+library(pacman)
+p_load(tidyverse, dslabs, car, reshape2)
+
+```
+### Loading in the dataset
+```{r}
+# Loading in the data from the divorce_margarine dataset
+data("divorce_margarine")
+
+# A little exploration of what the dataset is like
+str(divorce_margarine)
+summary(divorce_margarine)
+```
+# Part 1
+### Correlation analysis with matrix
+```{r}
+# Correlation of margarine dataset
+correlation_margarine <- cor(divorce_margarine$margarine_consumption, divorce_margarine$divorce_rate)
+
+# Printing the correlation 
+print(correlation_margarine)
+
+# Also just for niceness a correlation matrix
+corr_matrix <- cor(divorce_margarine)
+corr_matrix_melted <- melt(corr_matrix)
+ggplot(data = corr_matrix_melted, aes(x = Var1, y = Var2, fill = value)) +
+  geom_tile() +
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0, 
+                       limit = c(-1, 1), space = "Lab", 
+                       name="Correlation") +
+  theme_minimal() +
+  labs(title = "Correlation Matrix for Divorce and Margarine Consumption",
+       x = "Variables",
+       y = "Variables") +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, 
+                                   size = 10, hjust = 1))
+
+```
+
+# Analysis of results
+## We see that there is a strong correlation of .99 between margarine consumption and divorce rates. However, when only dealing with correlations, a lot of spurious correlations can arise, which might not be the causality of the problem. Correlations can be a useful tool to find the causation. Here a causality could potentially be that relationsships with an unhealthy diet leads to divorces.
+
+# Part 2
+
+```{r}
+# loading in the data 
+data("GSSvocab")
+
+# Filtering data by year 1978
+GSSvocab_1978 <- subset(GSSvocab, year == 1978)
+# removing missing values from 1978
+GSSvocab_1978 <- na.exclude(GSSvocab_1978)
+
+```
+
+```{r}
+# Visualizing relationship between vocabulary score and education level
+library(ggplot2)
+ggplot(GSSvocab_1978, aes(x = educ, y = vocab)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(title = "Vocabulary score vs. Education level in 1978", x = "Education Level", y = "Vocabulary Score")
+
+```
+```{r}
+# Building linear model for the relation
+model1 <- lm(vocab ~ educ, data = GSSvocab_1978)
+summary(model1)
+
+```
+## Explanation of results
+### We see an intercept of 1.24 which is represents the vocabulary score of a person with 0 years of education. This can be seen as the baseline. The coefficient for the education is at 0.39 meaning each year of education increases the vocabulary score of 0.39. However, the multiple r-squared value was 0.29 meaning that only 29% of the variability in vocabulary scores was accounted for by using education level as a predictor. The residiual standard error mwas 1.89 indicating the average deviation from vocabulary scores from the model predictions. A p-value of 2e-16 indicates that education level is statiscally significant to predict vocabulary scores.
+
+```{r}
+ # adding Native born as a predictor for the model
+model2 <- lm(vocab ~ educ + nativeBorn, data = GSSvocab_1978)
+summary(model2)
+# plotting with a boxplot now since native born is a categorical variable just to see the impact of that alone
+
+ggplot(GSSvocab_1978, aes(x = nativeBorn, y = vocab)) +
+  geom_boxplot() +
+  stat_summary(fun = mean, geom = "point", color = "red", size = 3) +
+  stat_summary(fun = mean, geom = "line", aes(group = 1), color = "red", linetype = "dashed") +
+  labs(title = "Vocabulary Score vs. Native-born Status", x = "Native-born", y = "Vocabulary Score")
+
+```
+## Explanation of results with nativeborn as another predictor
+### We see that the intercept is now 0.63 which is our baseline. Education level has a coeffecient of 0.39 and native born have a predictor of 0.65. The residual error was 1.89 and multiple r-squared explains 29.2% of the variance. Model performs a little better than the previous one, but not by a lot. Both predictors showed siginificant p-value, but education is more statistically significant. 
+
+```{r}
+# plotting to see if education level depends on if you are native born
+ggplot(GSSvocab_1978, aes(x = nativeBorn, y = educ)) +
+  geom_boxplot() +
+  labs(title = "Education Level vs. Native-born Status", x = "Native-born", y = "Education Level")
+
+# making them depend on each other in the model by putting an * between them
+model3 <- lm(vocab ~ educ * nativeBorn, data = GSSvocab_1978)
+summary(model3)
+
+```
+## Explanation of using interaction effects between education level and nativenes. 
+### We see that the estimate is now 0.35, and coefficient for education is .45, nativeness 0.95, and the interraction effect is -0.03. Standard error is 1.88 and multiple r-squared 0.29. Model performs similar to the other one in terms of r-squared and standard error, but the interraction effect does not seem to be statistically significant and it would probably not be a good idea to make a model with these interaction effects. 
+
+```{r}
+# Comparing the models using AIC 
+AIC(model1, model2, model3)
+
+```
+## Comparing models using AIc
+### From the AIC scores, we see that model2 (vocab ~ educ + nativeBorn) has the lowest value, indicating that it is the best performing one. The AIC score in itself does not mean a lot when not comparing to other scores. The results are also what we would expect given the outputs from the models, where it also seemed like model 2 had the most explanitory power and significant values. 
